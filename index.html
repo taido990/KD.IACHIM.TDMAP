@@ -663,19 +663,9 @@
 </head>
 
 <body>
-  <div id="gdLogin" style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:16px">
-    <form id="gdForm" style="width:100%;max-width:340px;background:var(--panel);border-radius:10px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3)">
-      <div style="font-weight:700;font-size:16px">TDMAP.PRO.VN · Bản đồ địa chính</div>
-      <div style="color:var(--mute);font-size:12px;margin:4px 0 12px">Đăng nhập bằng số hiệu tờ bản đồ (tên file, vd <b>0211</b>)</div>
-      <div style="display:flex;gap:4px"><input id="gdPass" type="password" autocomplete="current-password" placeholder="Mật khẩu" style="flex:1;min-width:0;padding:8px"><button id="gdEye" type="button" title="Hiện mật khẩu">👁</button></div>
-      <label class="row" style="margin-top:8px"><input id="gdRemember" type="checkbox" checked> Ghi nhớ, tự kết nối lần sau</label>
-      <button id="gdGo" type="submit" style="margin-top:10px;width:100%;padding:8px;font-weight:600">Đăng nhập</button>
-      <div id="gdMsg" style="margin-top:8px;font-size:12px;min-height:16px"></div>
-    </form>
-  </div>
   <div id="app">
     <aside id="side">
-      <div id="miniHd"><span id="gdWho">☁ Google Drive: chưa đăng nhập</span><button id="gdScan" title="Tải lại từ Google Drive (bản vẽ không đổi thì nạp GeoJSON đệm)">⟳</button><button id="gdOut" title="Đăng xuất (quên mật khẩu đã ghi nhớ)">Đăng xuất</button><button id="sideHide" title="Ẩn bảng lớp">✕</button></div>
+      <div id="miniHd"><span id="gdWho">☁ Google Drive: chưa kết nối</span><button id="gdScan" title="Tải lại từ Google Drive (bản vẽ không đổi thì nạp GeoJSON đệm)">⟳</button><button id="sideHide" title="Ẩn bảng lớp">✕</button></div>
       <header>
         <h1>TDMAP.PRO.VN_WebGIS CAD/GIS Viewer</h1><small>Đọc DGN · DWG · DXF · SHP · TAB ngay trên trình duyệt, không tải dữ liệu
           lên máy chủ</small>
@@ -2122,9 +2112,8 @@
     $('#gcClear').onclick = async () => { try { await GC.clear(); log('Đã xóa bộ đệm GeoJSON trên trình duyệt', 'o'); } catch (err) { log('Xóa bộ đệm: ' + err.message, 'e'); } };
 
     // ====== Google Drive (cách đọc của Web_DA): Drive API v3 + API Key, thư mục chia sẻ "Bất kỳ ai có đường liên kết" ======
-    // Đăng nhập: mật khẩu = số hiệu tờ bản đồ (tên file, vd 0211) → nạp 0211.dgn (+ CSDL 0211.gtp/.mdb… cùng tên) trong thư mục.
-    // Đây chỉ là chốt chặn giao diện (ai có link thư mục / đọc mã nguồn vẫn xem được file), không phải bảo mật thật.
-    const GD_STORE = 'webgis_gdrive_iachim_v2', GD_PASS = 'webgis_gdrive_pass_iachim_v1', GC_DIR = '_geojson';
+    // Mở trang là tự nạp mọi bản vẽ trong thư mục Drive (không đăng nhập).
+    const GD_STORE = 'webgis_gdrive_iachim_v2', GC_DIR = '_geojson';
     const GD_DEF = 'https://drive.google.com/drive/folders/1J0KLgsIUw1qDbukXV2k5u6_qevNh3mKe?usp=sharing';
     // Không gắn cứng API Key dạng "AIza…" (tránh máy quét kho mã): bí danh → chuỗi XOR + base64, như Web_DA
     const GD_KEY_ALIASES = { 'TDMAP-2026': 'FQ03IANLcWhYZw46AzIuLXJ8Cydden4ABSYpIXRnIyAMIGACSkFB' }, GD_KEY_PAD = 'TDMAP2026SECRET';
@@ -2188,68 +2177,38 @@
       KTT_AUTO = null; KTT_XA = null; $('#ktt').querySelector('option[value="auto"]')?.remove();
       $('#crsType').value = 'vn3'; $('#ktt').value = String(i); $('#kttCustom').value = ''; refreshProj(); saveCfg();
     }
-    // Nạp các file cùng tên tờ bản đồ (+ thư viện ký hiệu .rsc/.tbl trong thư mục); pass = null → nạp cả thư mục
-    async function gdOpen(L, fid, pass) {
-      const key = pass == null ? null : normName(pass), out = [];
-      for (const f of L.files.filter(f => wanted(f) && (key == null || normName(base(f.name)) === key || LIB_EXT.includes(ext(f.name))))) {
+    // Nạp mọi bản vẽ + CSDL + thư viện ký hiệu (.rsc/.tbl) trong thư mục
+    async function gdOpen(L, fid) {
+      const out = [];
+      for (const f of L.files.filter(wanted)) {
         const drv = { id: f.id, name: f.name, size: f.size, modified: f.modified, stamp: `${f.size}-${f.modified}`, folder: fid, gj: L.cache[f.id] || null };
         // Bản vẽ CAD: chỉ tạo "vỏ" — chỉ tải file gốc khi không có GeoJSON đệm còn đúng
         if (GC_EXT.includes(ext(f.name))) { const s = new File([], f.name, { lastModified: f.modified }); s._drv = drv; out.push(s); continue; }
         try { out.push(await gdFile(drv)); } catch (err) { log(`${f.name}: không tải được từ Drive (${err.message})`, 'w'); }
       }
-      await scanFolder(out, `Google Drive "${L.folder}"${pass == null ? '' : ' · tờ ' + pass}`);
+      await scanFolder(out, `Google Drive "${L.folder}"`);
       busy();
     }
     let gdSess = null;
-    // Bật / tắt đăng nhập (mật khẩu = số hiệu tờ). Tắt: mở trang là tự nạp mọi bản vẽ trong thư mục Drive, không hỏi mật khẩu
-    const GD_LOGIN = false;
-    if (!GD_LOGIN) { $('#gdLogin').style.display = 'none'; $('#gdOut').hidden = true; }
     async function gdOpenAll() {
       const fid = gdFolderId($('#gdUrl').value.trim()); if (!fid) { log('Link thư mục Google Drive không hợp lệ (Cấu hình Google Drive)', 'e'); return; }
       busy('Đang kết nối Google Drive…');
       try {
         const L = await gdList(fid), tos = L.files.filter(f => GC_EXT.includes(ext(f.name))).map(f => f.name.replace(/.[^.]+$/, ''));
-        gdSess = { pass: null, fid };
+        gdSess = { fid };
         $('#gdWho').textContent = `☁ ${L.folder}`; $('#mapSub').textContent = `${tos.length ? 'Tờ bản đồ ' + tos.join(', ') + ' · ' : ''}${L.folder}`;
         useDefKtt(); log(`Google Drive "${L.folder}": nạp cả thư mục · KTT mặc định ${KTT_DEF} ${dms(kttLon())}`, 'o');
-        await gdOpen(L, fid, null);
+        await gdOpen(L, fid);
       } catch (err) { busy(); log('Google Drive: ' + (err.message || err), 'e'); }
     }
-    const gdMsg = (t, err) => { $('#gdMsg').textContent = t; $('#gdMsg').style.color = err ? 'var(--err)' : 'var(--mute)'; };
-    async function gdLogin(pass, auto) {
-      pass = (pass || '').trim(); if (!pass) { gdMsg('Nhập mật khẩu (số hiệu tờ bản đồ, vd 0211)', true); return; }
-      const fid = gdFolderId($('#gdUrl').value.trim()); if (!fid) { gdMsg('Link thư mục Google Drive không hợp lệ (Cấu hình Google Drive)', true); return; }
-      $('#gdGo').disabled = true; gdMsg(auto ? 'Đang tự kết nối Google Drive…' : 'Đang kết nối Google Drive…');
-      try {
-        const L = await gdList(fid);
-        if (!L.files.some(f => GC_EXT.includes(ext(f.name)) && normName(base(f.name)) === normName(pass))) {
-          if (auto) try { localStorage.removeItem(GD_PASS); } catch (_) { }
-          gdMsg(`Sai mật khẩu: không có bản đồ "${pass}" trong thư mục`, true); $('#gdPass').select(); return;
-        }
-        try { $('#gdRemember').checked ? localStorage.setItem(GD_PASS, pass) : localStorage.removeItem(GD_PASS); } catch (_) { }
-        gdSess = { pass, fid }; $('#gdLogin').style.display = 'none'; gdMsg('');
-        $('#gdWho').textContent = `☁ ${L.folder} · tờ ${pass}`; $('#mapSub').textContent = `Tờ bản đồ ${pass} · ${L.folder}`;
-        useDefKtt(); log(`Google Drive "${L.folder}": đăng nhập tờ ${pass} · KTT mặc định ${KTT_DEF} ${dms(kttLon())}`, 'o');
-        await gdOpen(L, fid, pass);
-      } catch (err) { busy(); gdMsg('Không kết nối được Google Drive: ' + (err.message || err), true); if (gdSess) log('Google Drive: ' + (err.message || err), 'e'); }
-      finally { $('#gdGo').disabled = false; }
-    }
-    function gdLogout() {
-      try { localStorage.removeItem(GD_PASS); } catch (_) { }
-      gdSess = null; for (const F of [...files.values()]) dropFile(F); syncLayerList(); labels.redraw(); map.closePopup();
-      $('#gdWho').textContent = '☁ Google Drive: chưa đăng nhập'; $('#mapSub').textContent = ''; $('#gdPass').value = ''; gdMsg(''); $('#gdLogin').style.display = 'flex'; $('#gdPass').focus();
-    }
-    $('#gdForm').onsubmit = e => { e.preventDefault(); gdLogin($('#gdPass').value); };
-    $('#gdEye').onclick = () => { const p = $('#gdPass'), show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#gdEye').textContent = show ? '🙈' : '👁'; };
-    $('#gdOut').onclick = gdLogout;
     // Quét lại: bản vẽ không đổi → nạp GeoJSON đệm; đổi → đọc lại
     $('#gdScan').onclick = async () => {
-      if (!gdSess) { GD_LOGIN ? ($('#gdLogin').style.display = 'flex') : gdOpenAll(); return; }
+      if (!gdSess) { gdOpenAll(); return; }
       saveGd(); busy('Đang quét thư mục Google Drive…');
-      try { const L = await gdList(gdSess.fid); await gdOpen(L, gdSess.fid, gdSess.pass); } catch (err) { busy(); log('Google Drive: ' + (err.message || err), 'e'); }
+      try { const L = await gdList(gdSess.fid); await gdOpen(L, gdSess.fid); } catch (err) { busy(); log('Google Drive: ' + (err.message || err), 'e'); }
     };
-    // Tự kết nối: tắt đăng nhập → nạp cả thư mục; bật → đã ghi nhớ mật khẩu thì đăng nhập ngay (chạy sau khi cả trang đã khởi tạo)
-    setTimeout(() => { if (!GD_LOGIN) { gdOpenAll(); return; } let p = null; try { p = localStorage.getItem(GD_PASS); } catch (_) { } if (p) { $('#gdPass').value = p; gdLogin(p, true); } else $('#gdPass').focus(); }, 0);
+    // Tự kết nối: nạp cả thư mục Drive (chạy sau khi cả trang đã khởi tạo)
+    setTimeout(gdOpenAll, 0);
 
     function groupKey(p) {
       if (p.Level !== undefined && p.Level !== null) return 'Level ' + p.Level;
