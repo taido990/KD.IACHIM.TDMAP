@@ -1,0 +1,6 @@
+# Gói đưa lên GitHub Pages: tạo lại bằng dong_goi_github.ps1, đã có trên repo KD.IACHIM.TDMAP
+/github/
+# File tạm
+__pycache__/
+*.pyc
+desktop.ini
