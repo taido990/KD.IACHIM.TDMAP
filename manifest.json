@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Khu vực đo Xã Ia Chim - TDMAP",
+  "short_name": "IA CHIM",
+  "description": "Tra cứu bản đồ địa chính khu vực đo xã Ia Chim, tỉnh Quảng Ngãi - TDMAP.PRO.VN",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#00c6a7",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

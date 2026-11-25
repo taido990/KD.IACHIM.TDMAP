@@ -4,7 +4,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TDMAP.PRO.VN_WebGIS CAD/GIS Viewer</title>
+  <title>Ia Chim - TDMAP.PRO.VN WebGIS</title>
+  <!-- Cài lên màn hình chính (PWA): manifest.json, sw.js, icon-*.png, apple-touch-icon.png, app-icon.ico đặt cùng thư mục -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="app-icon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#00c6a7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="IA CHIM">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="application-name" content="IA CHIM">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
@@ -2808,6 +2819,8 @@
     try { const t = localStorage.getItem('webgis_tab'); if (t === 'params') showTab('params'); } catch (_) { }
     refreshProj();
     log('Sẵn sàng. Chọn hệ tọa độ VN-2000 đúng KTT trước khi mở DGN/DWG/DXF.');
+    // Service worker để cài lên màn hình chính (chỉ chạy trên https hoặc localhost, bỏ qua khi mở file:// trực tiếp)
+    if ('serviceWorker' in navigator && /^https:$|^http:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
   </script>
 </body>
 
