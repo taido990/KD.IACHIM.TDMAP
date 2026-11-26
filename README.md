@@ -4,7 +4,7 @@ WebGIS xem bản vẽ địa chính DGN trên nền ảnh vệ tinh, chạy hoà
 
 - Bản vẽ đọc trực tiếp từ thư mục Google Drive (Drive API v3, thư mục chia sẻ "Bất kỳ ai có đường liên kết").
 - Lần đầu: giải mã DGN (V7/V8) → GeoJSON WGS-84, lưu đệm trên trình duyệt. Lần sau file không đổi → nạp GeoJSON, nhanh hơn.
-- Hệ tọa độ mặc định VN-2000 múi 3°, KTT 107°30′ (xã Ia Chim, mã 23326 — vùng Kon Tum cũ, nay thuộc tỉnh Quảng Ngãi).
+- Hệ tọa độ mặc định VN-2000 múi 3°, KTT 108°00′ (xã Ia Chim, mã 23326, tỉnh Quảng Ngãi).
 - Bảng bật/tắt lớp (nút ☰ Lớp), nút vị trí của tôi (GPS).
 
 ## Các file
